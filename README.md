@@ -1,5 +1,6 @@
 # K8S-Project
 
+# 다이어그램 https://www.mermaidchart.com/app/projects/e9734be9-d68b-4e1c-b32b-845690f92034/diagrams/afe8fe8f-3061-4529-b3a2-0de01c7b80b1/version/v0.1/edit
 # README.md: Docker 이미지 관리 및 레지스트리 구성
 
 ## 1. 사전 요구 사항 (Prerequisites)
