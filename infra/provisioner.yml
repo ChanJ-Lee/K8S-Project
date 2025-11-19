@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-provisioners
+  namespace: project-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-provisioners
+  template:
+    metadata:
+      labels:
+        app: nfs-provisioners
+    spec:
+      serviceAccountName: nfs-provisioner-sa # 01-dp-rbac.yml에서 만든 SA
+      containers:
+        # 1. SSD 프로비저너
+        - name: ssd-provisioner-container
+          image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          env:
+            - name: PROVISIONER_NAME
+              value: ssd-provisioner # sc-ssd.yml과 일치
+            - name: NFS_SERVER
+              value: 172.16.101.10 # Master(NFS서버) IP
+            - name: NFS_PATH
+              value: /shared2/ssd-data # SSD용 NFS 경로
+          volumeMounts:
+            - name: nfs-ssd-path
+              mountPath: /persistentvolumes
+        # 2. HDD 프로비저너
+        - name: hdd-provisioner-container
+          image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          env:
+            - name: PROVISIONER_NAME
+              value: hdd-provisioner # sc-hdd.yml과 일치
+            - name: NFS_SERVER
+              value: 172.16.101.10 # Master(NFS서버) IP
+            - name: NFS_PATH
+              value: /shared2/hdd-data # HDD용 NFS 경로
+          volumeMounts:
+            - name: nfs-hdd-path
+              mountPath: /persistentvolumes
+      volumes:
+        - name: nfs-ssd-path
+          nfs:
+            server: 172.16.101.10
+            path: /shared2/ssd-data
+        - name: nfs-hdd-path
+          nfs:
+            server: 172.16.101.10
+            path: /shared2/hdd-data

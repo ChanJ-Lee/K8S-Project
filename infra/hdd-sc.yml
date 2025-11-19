@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hdd-sc
+provisioner: hdd-provisioner
+parameters:
+  archiveOnDelete: "true"
+  pathPattern: "${.PVC.namespace}/${.PVC.name}"
+  onDelete: "delete"
+  type: "hdd"
+volumeBindingMode: Immediate
+reclaimPolicy: Delete
+allowVolumeExpansion: true

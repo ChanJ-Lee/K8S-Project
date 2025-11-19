@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-provisioner-sa
+  namespace: project-ns
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-provisioner-binding
+subjects:
+  - kind: ServiceAccount
+    name: nfs-provisioner-sa
+    namespace: project-ns
+roleRef:
+  kind: ClusterRole
+  name: nfs-provisioner-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# --- [이전 ClusterRole, ClusterRoleBinding 내용은 그대로 둡니다] ---
+
+---
+# [추가] Leader Election을 위한 Namespace-specific Role
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-provisioner-leader-role
+  namespace: project-ns # ◀ 이 네임스페이스에만 적용
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"] # ◀ endpoints 제어 권한
+
+---
+# [추가] 위 Role을 ServiceAccount에 연결
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-provisioner-leader-binding
+  namespace: project-ns # ◀ 이 네임스페이스에만 적용
+subjects:
+  - kind: ServiceAccount
+    name: nfs-provisioner-sa # ◀ 기존 ServiceAccount
+    namespace: project-ns
+roleRef:
+  kind: Role
+  name: nfs-provisioner-leader-role # ◀ 위에서 만든 Role
+  apiGroup: rbac.authorization.k8s.io

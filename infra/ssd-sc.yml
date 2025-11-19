@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd-sc
+provisioner: ssd-provisioner
+parameters:
+  archiveOnDelete: "true"
+  pathPattern: "${.PVC.namespace}/${.PVC.name}"
+  onDelete: "delete"
+  type: "ssd"
+volumeBindingMode: Immediate
+reclaimPolicy: Delete
+allowVolumeExpansion: true

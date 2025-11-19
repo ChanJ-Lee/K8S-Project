@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hdd-db-sts
+  namespace: project-ns
+spec:
+  serviceName: "hdd-db-svc"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdd-db
+  template:
+    metadata:
+      labels:
+        app: hdd-db
+    spec:
+      # --- SSD 노드 배치 조건 ---
+      tolerations:
+      - key: "disktype"    # Taint 키 (disktype)
+        operator: "Equal"
+        value: "hdd"         # Taint 값 (hdd)
+        effect: "NoSchedule"
+      # --- ⬆️⬆️⬆️ 여기까지 ⬆️⬆️⬆️ ---
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values: ["hdd"]
+      # --- DB 암호 주입 ---
+      containers:
+      - name: mysql2
+        image: public.ecr.aws/docker/library/mysql:latest
+        envFrom:
+        - secretRef:
+            name: hdd-db-secret # infra/secrets.yml에서 정의
+        env:
+        - name: MYSQL_ROOT_PASSWORD # DB가 초기화
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_USER # ◀ Secret에서 일반 사용자명 주입
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: SPRING_DATASOURCE_USERNAME # WA사용자명 사용
+        - name: MYSQL_PASSWORD # ◀ Secret사용자 암호 주입
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: SPRING_DATASOURCE_PASSWORD
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+  # --- PVC 자동 생성 (DP 사용) ---
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "hdd-sc" # infra/storageclasses.yml과 일치
+      resources:
+        requests:
+          storage: 5Gi # PVC 용량

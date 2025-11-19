@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: main-ingress
+  namespace: project-ns
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    #nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: 3tier.com
+    http:
+      paths:
+      - path: /ssd
+        pathType: Prefix
+        backend:
+          service:
+            name: ssd-web-svc
+            port:
+              number: 80
+              
+      - path: /hdd
+        pathType: Prefix
+        backend:
+          service:
+            name: hdd-web-svc
+            port:
+              number: 80

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdd-was-dep
+  namespace: project-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdd-was
+  template:
+    metadata:
+      labels:
+        app: hdd-was
+    spec:
+      # --- SSD 노드 강제 배치 설정 ---
+      tolerations:
+      - key: "disktype"      # Taint 키 (workload)
+        operator: "Equal"    
+        value: "hdd"       # Taint 값 (heavy)
+        effect: "NoSchedule" # Taint 효과 (NoSchedule)
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values: ["hdd"]
+      containers:
+      - name: springboot
+        image: 61.254.18.30:5000/pcm/hpaimg:1 # (JSP 실행용)
+        ports:
+        - containerPort: 8085
+        # --- HPA CPU 사용량 계산 기준 ---
+        resources:
+          requests:
+            cpu: "200m" # (200m = 100%로 간주)
+          limits:
+            cpu: "500m"
+        env:
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: SPRING_DATASOURCE_URL
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hdd-db-secret
+              key: SPRING_DATASOURCE_PASSWORD

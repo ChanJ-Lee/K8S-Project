@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hdd-was-svc
+  namespace: project-ns
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080 # WAS는 8080 포트 사용
+      targetPort: 8085
+  selector:
+    app: hdd-was

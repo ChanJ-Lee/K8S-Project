@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdd-web-dep
+  namespace: project-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdd-web
+  template:
+    metadata:
+      labels:
+        app: hdd-web
+    spec:
+      # --- HDD 노드 배치 조건 ---
+      tolerations:
+      - key: "disktype"    # Taint 키: disktype
+        operator: "Equal"    
+        value: "hdd"         # Taint 값: hdd
+        effect: "NoSchedule"
+        
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values: ["hdd"]
+      containers:
+      - name: nginx
+        image: public.ecr.aws/nginx/nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config-vol
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      volumes:
+      - name: nginx-config-vol
+        configMap:
+          name: hdd-web-cm

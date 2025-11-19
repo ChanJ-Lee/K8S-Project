@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hdd-web-cm
+  namespace: project-ns
+data:
+  default.conf: |
+    server {
+        listen 80;
+
+        location / {
+            proxy_pass http://hdd-was-svc:8080/; #Spring boot
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }

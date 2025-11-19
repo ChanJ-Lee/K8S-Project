@@ -1,0 +1,19 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.16.101.200-172.16.101.220  # ◀◀◀ LoadBalancer가 사용할 IP 대역 (사용자 환경에 맞게 수정)
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default-l2
+  namespace: metallb-system
+spec:
+  # (중요) 'namespaceSelector'를 지정하지 않으면, 
+  # 'ingress-nginx'를 포함한 "모든" 네임스페이스의 LoadBalancer 요청에 응답합니다.
+  ipAddressPools:
+  - default-pool

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ssd-db-sts
+  namespace: project-ns
+spec:
+  serviceName: "ssd-db-svc"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ssd-db
+  template:
+    metadata:
+      labels:
+        app: ssd-db
+    spec:
+      # --- SSD 노드 배치 조건 ---
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values: ["ssd"]
+      # --- DB 암호 주입 ---
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        envFrom:
+        - secretRef:
+            name: ssd-db-secret # infra/secrets.yml에서 정의
+        env:
+        - name: MYSQL_ROOT_PASSWORD # DB가 초기화
+          valueFrom:
+            secretKeyRef:
+              name: ssd-db-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_USER # ◀ Secret에서 일반 사용자명 주입
+          valueFrom:
+            secretKeyRef:
+              name: ssd-db-secret
+              key: SPRING_DATASOURCE_USERNAME # WA사용자명 사용
+        - name: MYSQL_PASSWORD # ◀ Secret사용자 암호 주입
+          valueFrom:
+            secretKeyRef:
+              name: ssd-db-secret
+              key: SPRING_DATASOURCE_PASSWORD
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+  # --- PVC 자동 생성 (DP 사용) ---
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "ssd-sc" # infra/storageclasses.yml과 일치
+      resources:
+        requests:
+          storage: 5Gi # PVC 용량
